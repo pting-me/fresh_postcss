@@ -1,5 +1,4 @@
-import { Plugin } from "$fresh/server.ts";
-import postcss, { AcceptedPlugin, ProcessOptions } from "postcss";
+import { AcceptedPlugin, Plugin, postcss, ProcessOptions } from "./deps.ts";
 
 const STYLE_ELEMENT_ID = "__FRSH_POSTCSS";
 
@@ -16,8 +15,7 @@ export interface Config {
 export function freshPostcss(config: Config): Plugin {
   const {
     plugins,
-    from = "./style.css",
-    to = "./processed.css",
+    from = "./static/style.css",
     ...processOptions
   } = config;
 
@@ -29,7 +27,7 @@ export function freshPostcss(config: Config): Plugin {
       if (res.requiresHydration) {
         const css = Deno.readTextFileSync(from);
         const cssText =
-          postcss(plugins).process(css, { from, to, ...processOptions }).css;
+          postcss(plugins).process(css, { from, ...processOptions }).css;
         return {
           styles: [{ cssText, id: STYLE_ELEMENT_ID }],
           scripts: [],

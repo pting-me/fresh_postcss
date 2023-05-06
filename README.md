@@ -31,6 +31,11 @@ await start(manifest, {
 });
 ```
 
+## Technical details
+
+By default, the plugin will look for `static/styles.css`, and inject it into a
+style tag.
+
 ## Limitations
 
 ### File output
