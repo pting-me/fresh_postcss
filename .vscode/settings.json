@@ -7,5 +7,6 @@
   "editor.quickSuggestions": {
     "strings": true
   },
-  "tsImportSorter.configuration.configurationFileName": "./.vscode/import-sorter.json"
+  "tsImportSorter.configuration.configurationFileName": "./.vscode/import-sorter.json",
+  "tsImportSorter.configuration.autoFormat": "off"
 }

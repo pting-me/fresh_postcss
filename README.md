@@ -38,14 +38,21 @@ style tag.
 
 ## Limitations
 
-### File output
+### No file output on Deno Deploy
 
-Currently only style injection is supported.
+Using the "to" option will write a file using "Deno.writeFile". It may work
+locally, but will not work with Deno Deploy.
 
-### No async plugins
+https://deno.com/deploy/docs/runtime-fs
 
-Fresh plugins are synchronous only, so the functionality is highly limited. This
-also means that async plugins for PostCSS (such as `preset-env`) will not work.
+If you still want to do a file output, you may have to make sure the directory
+you're saving to doesn't cause a render looop.
+
+### No guarantee of processing
+
+Fresh plugins are synchronous only. This plugin processes the CSS file
+asynchronously, so the render function may finish before the CSS is done
+processing.
 
 Related: https://github.com/denoland/fresh/issues/728
 
