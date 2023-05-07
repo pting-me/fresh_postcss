@@ -4,6 +4,8 @@ Process styles through PostCSS in your Fresh project.
 
 ## Usage
 
+Your config plugins need to be in array format.
+
 ```ts
 // postcss.config.ts
 import autoprefixer from "https:/esm.sh/autoprefixer@10.4.14";
@@ -17,14 +19,19 @@ const config = {
 export default config;
 ```
 
+Postcss uses an async function to process styles, so you can process before
+starting the server to guarantee your CSS files are processed before render.
+
 ```ts
 // main.ts
 
 import { start } from "$fresh/server.ts";
-import freshPostcss from "$fresh_postcss/mod.ts";
+import freshPostcss, { process } from "$fresh_postcss/mod.ts";
 
 import manifest from "./fresh.gen.ts";
 import postcssConfig from "./postcss.config.ts";
+
+await process(postcssConfig);
 
 await start(manifest, {
   plugins: [freshPostcss(postcssConfig)],
@@ -52,13 +59,14 @@ you're saving to doesn't cause a render looop.
 
 Fresh plugins are synchronous only. This plugin processes the CSS file
 asynchronously, so the render function may finish before the CSS is done
-processing.
+processing. We can work around that by calling `process` before starting the
+server.
 
 Related: https://github.com/denoland/fresh/issues/728
 
 We won't be able to relegate async functionality to the `scripts` because
 PostCSS is not built for a browser context. It would also be a step backwards
-when we're trying to do as much SSR as possible.
+from the SSR approach.
 
 ### Not all config formats are supported
 

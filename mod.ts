@@ -1,1 +1,5 @@
-export { type Config, freshPostcss as default } from "./src/plugin.ts";
+export {
+  type Config,
+  freshPostcss as default,
+  process,
+} from "./src/plugin.ts";
