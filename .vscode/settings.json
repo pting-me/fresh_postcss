@@ -1,12 +1,12 @@
 {
   "deno.enable": true,
   "deno.lint": true,
-  "deno.importMap": "./import_map.json",
+  "deno.unstable": true,
   "editor.defaultFormatter": "denoland.vscode-deno",
   "editor.suggest.showStatusBar": true,
   "editor.quickSuggestions": {
     "strings": true
   },
   "tsImportSorter.configuration.configurationFileName": "./.vscode/import-sorter.json",
-  "tsImportSorter.configuration.autoFormat": "off"
+  "tsImportSorter.configuration.autoFormat": "onSave"
 }

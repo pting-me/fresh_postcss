@@ -1,89 +1,117 @@
 import {
-  AcceptedPlugin,
-  Plugin,
+  PluginRenderStyleTag,
+} from "https://deno.land/x/fresh@1.2.0/server.ts";
+
+import {
+  expandGlob,
+  FreshPlugin,
   postcss,
+  PostcssPlugin,
   ProcessOptions,
-  yellow,
 } from "./deps.ts";
 
-const STYLE_ELEMENT_ID = "__FRSH_POSTCSS";
+const STYLE_ELEMENT_ID_PREFIX = "__FRSH_POSTCSS__";
 
-export interface Config {
+/**
+ * Plugin options for the Fresh PostCSS Plugin
+ */
+export interface Options {
+  /**
+   * PostCSS Parser
+   * @see {@link https://github.com/postcss/postcss/blob/15c5f61aa6f72df51f78dbda724b044f616be4fe/docs/syntax.md#parser PostCSS Docs - Parser}
+   */
   parser?: ProcessOptions["parser"];
+  /**
+   * PostCSS Stringifier
+   * @see {@link https://github.com/postcss/postcss/blob/15c5f61aa6f72df51f78dbda724b044f616be4fe/docs/syntax.md#stringifier PostCSS Docs - Stringifier}
+   */
   stringifier?: ProcessOptions["stringifier"];
+  /**
+   * PostCSS Syntax
+   * @see {@link https://github.com/postcss/postcss/blob/15c5f61aa6f72df51f78dbda724b044f616be4fe/docs/syntax.md#stringifier PostCSS Docs - Syntax}
+   */
   syntax?: ProcessOptions["syntax"];
-  map?: ProcessOptions["map"];
-  from?: string;
-  to?: string;
-  plugins?: AcceptedPlugin[];
+  /**
+   * Specifies an array of glob patterns to be processed. Defaults to `["**\/*.{css,sss,pcss}"]`
+   */
+  include?: string[];
+  /**
+   * Specifies an array of glob patterns that should be skipped when resolving `include`.
+   */
+  exclude?: string[];
+  /**
+   * Specifies an array of PostCSS plugins.
+   */
+  plugins?: PostcssPlugin[];
 }
 
-function createPlugin() {
-  let cssText = "";
+function createElementId(path: string) {
+  const cwd = Deno.cwd();
+  const relativePath = path.startsWith(cwd) ? path.substring(cwd.length) : path;
 
-  const process = async (config: Config = {}) => {
-    const {
-      plugins,
-      from = "./static/style.css",
-      to,
-      ...processOptions
-    } = config;
-    const css = await Deno.readTextFile(from);
+  // remove leading slashes
+  const pathIndex = relativePath.search(/[^/]/);
 
-    if (to) {
-      const fileContent =
-        (await postcss(plugins).process(css, { from, to, ...processOptions }))
-          .css;
+  if (pathIndex === -1) {
+    return STYLE_ELEMENT_ID_PREFIX;
+  }
 
-      // Note that this does not work
-      Deno.writeTextFile(to, fileContent);
-    } else {
-      cssText =
-        (await postcss(plugins).process(css, { from, to, ...processOptions }))
-          .css;
-    }
-  };
-
-  const freshPostcss = (config: Config = {}): Plugin => {
-    if (config.to) {
-      console.warn(
-        yellow("Warning (fresh_postcss):"),
-        'Using the "to" option will write a file using "Deno.writeFile".\n',
-        "It may work locally, but will not work with Deno Deploy.\n",
-        "https://deno.com/deploy/docs/runtime-fs\n",
-      );
-    }
-
-    void process(config);
-
-    return {
-      name: "postcss",
-      render: (ctx) => {
-        const res = ctx.render();
-
-        if (res.requiresHydration) {
-          // This will usually require double refresh for changes to be updated
-          void process(config);
-        }
-
-        if (config.to) {
-          return {
-            styles: [],
-            scripts: [],
-          };
-        }
-
-        return {
-          styles: [{ cssText, id: STYLE_ELEMENT_ID }],
-          scripts: [],
-        };
-      },
-    };
-  };
-
-  return { process, freshPostcss };
+  return STYLE_ELEMENT_ID_PREFIX +
+    relativePath.substring(pathIndex).replaceAll(/[^A-Za-z0-9]+/g, "_")
+      .toUpperCase();
 }
 
-const { process, freshPostcss } = createPlugin();
+function freshPostcss(config: Options = {}): FreshPlugin {
+  const {
+    include = ["**/*.{css,sss,pcss}"],
+    exclude,
+    plugins,
+    ...processOptions
+  } = config;
 
-export { freshPostcss, process };
+  const styles: PluginRenderStyleTag[] = [];
+
+  return {
+    name: "postcss",
+    renderAsync: async (ctx) => {
+      const res = await ctx.renderAsync();
+
+      if (res.requiresHydration) {
+        styles.length = 0;
+
+        const elementIds = new Set<string>();
+
+        // Need to iterate through include for now
+        // https://github.com/denoland/deno_std/issues/3465
+        for (const glob of include) {
+          for await (const file of expandGlob(glob, { exclude })) {
+            // Read and process CSS file
+            const css = await Deno.readTextFile(file.path);
+            const cssText =
+              (await postcss(plugins).process(css, processOptions)).css;
+
+            // Create element id from the filename
+            let id = createElementId(file.path);
+            if (elementIds.has(id)) {
+              // This _should_ be guaranteed to be unique because it's the only
+              // place we're suffixing a double underscore.
+              id = `${id}__${elementIds.size}`;
+            }
+            elementIds.add(id);
+
+            styles.push({
+              cssText,
+              id,
+            });
+          }
+        }
+      }
+
+      return {
+        styles,
+        scripts: [],
+      };
+    },
+  };
+}
+export { freshPostcss };
