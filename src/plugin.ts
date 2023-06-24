@@ -42,7 +42,9 @@ export interface Options {
   /**
    * Specifies an array of PostCSS plugins.
    */
-  plugins?: PostcssPlugin[];
+  // TODO: Figure out a better typing convention
+  // Currently explicitly tying this to `AcceptedPlugin` will break if there's a minor version mismatch.
+  plugins?: unknown[];
 }
 
 function createElementId(path: string) {
@@ -88,7 +90,10 @@ function freshPostcss(config: Options = {}): FreshPlugin {
             // Read and process CSS file
             const css = await Deno.readTextFile(file.path);
             const cssText =
-              (await postcss(plugins).process(css, processOptions)).css;
+              (await postcss(plugins as PostcssPlugin[]).process(
+                css,
+                processOptions,
+              )).css;
 
             // Create element id from the filename
             let id = createElementId(file.path);
