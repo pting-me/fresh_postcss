@@ -1,10 +1,7 @@
 import {
-  PluginRenderStyleTag,
-} from "https://deno.land/x/fresh@1.2.0/server.ts";
-
-import {
   expandGlob,
   FreshPlugin,
+  PluginRenderStyleTag,
   postcss,
   PostcssPlugin,
   ProcessOptions,
@@ -82,18 +79,24 @@ function freshPostcss(config: Options = {}): FreshPlugin {
         styles.length = 0;
 
         const elementIds = new Set<string>();
+        const filePaths = new Set<string>();
 
         // Need to iterate through include for now
         // https://github.com/denoland/deno_std/issues/3465
         for (const glob of include) {
           for await (const file of expandGlob(glob, { exclude })) {
+            if (filePaths.has(file.path)) {
+              continue;
+            }
+
+            filePaths.add(file.path);
+
             // Read and process CSS file
             const css = await Deno.readTextFile(file.path);
-            const cssText =
-              (await postcss(plugins as PostcssPlugin[]).process(
-                css,
-                processOptions,
-              )).css;
+            const cssText = (await postcss(plugins as PostcssPlugin[]).process(
+              css,
+              processOptions,
+            )).css;
 
             // Create element id from the filename
             let id = createElementId(file.path);

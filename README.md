@@ -42,3 +42,14 @@ await start(manifest, {
   ],
 });
 ```
+
+## Limitations
+
+### Cannot load PostCSS config files
+
+Currently unable to use
+[`postcss-load-config`](https://github.com/postcss/postcss-load-config). One of
+the (indirect) dependencies down the line fails due to an error on
+`cspotcode/node-source-map-support`.
+
+Related: https://github.com/cspotcode/node-source-map-support/issues/43
